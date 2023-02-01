@@ -4,5 +4,5 @@
 // };
 
 self.addEventListener("fetch", (event) => {
-  event.respondWith(fetch(request));
+  event.respondWith(fetch(event.request));
 });
