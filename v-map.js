@@ -23,6 +23,7 @@ export class VMap extends HTMLElement {
     if (old !== value) {
       console.log(value);
       this.#zoom = round(value, 0);
+      this.#calcViewFrameCellsIdx();
       this.#render();
     }
   }
@@ -48,9 +49,12 @@ export class VMap extends HTMLElement {
     this.updateCanvasSize();
   }
   render() {
+    if (!this.#visibleFrameCellsIdx) {
+      this.#calcViewFrameCellsIdx();
+    }
     if (this.tilePath) {
       const [collCount, cellCount] = this.zooms[this.zoom];
-      const { start, end } = this.#calcViewFrameCellsIdx();
+      const { start, end } = this.#visibleFrameCellsIdx;
 
       this.clear();
 
@@ -59,7 +63,7 @@ export class VMap extends HTMLElement {
           this.loadImg(this.zoom, x, y)
             .then(img => {
               const [collCount, cellCount] = this.zooms[this.zoom];
-              const { start, end } = this.#calcViewFrameCellsIdx();
+              const { start, end } = this.#visibleFrameCellsIdx;
               if (x >= start.x && x < end.x && y >= start.y && y < end.y) {
                 const x_px = x * this.tileSize.x + this.#viewFrame.x;
                 const y_px = y * this.tileSize.y + this.#viewFrame.y;
@@ -75,16 +79,17 @@ export class VMap extends HTMLElement {
       this.render();
     }, 1000 / 60);
   }
+  #visibleFrameCellsIdx = null;
   #calcViewFrameCellsIdx() {
     const [collCount, cellCount] = this.zooms[this.zoom];
 
     const start = {
-      x: ~~(-this.#viewFrame.x / this.tileSize.x),
-      y: ~~(-this.#viewFrame.y / this.tileSize.y)
+      x: ~~(-this.#viewFrame.x / this.tileSize.x)-1,
+      y: ~~(-this.#viewFrame.y / this.tileSize.y)-1
     };
     const end = {
-      x: ~~((-this.#viewFrame.x + this.canvas.width) / this.tileSize.x) + 1,
-      y: ~~((-this.#viewFrame.y + this.canvas.height) / this.tileSize.y) + 1
+      x: ~~((-this.#viewFrame.x + this.canvas.width) / this.tileSize.x) + 2,
+      y: ~~((-this.#viewFrame.y + this.canvas.height) / this.tileSize.y) + 2
     };
 
     start.x = start.x >= 0 ? start.x : 0;
@@ -92,7 +97,7 @@ export class VMap extends HTMLElement {
     end.x = end.x <= collCount ? end.x : collCount;
     end.y = end.y <= cellCount ? end.y : cellCount;
 
-    return { start, end };
+    this.#visibleFrameCellsIdx = { start, end };
   }
   get scrollX() {
     return this.#viewFrame.x;
@@ -102,13 +107,21 @@ export class VMap extends HTMLElement {
   }
   set scrollX(value) {
     if (value > this.maxScrollOffsetX || value < this.maxScrollOffsetX * -1) return;
-    this.#viewFrame.x = value;
-    this.#render();
+    const old = this.#viewFrame.x;
+    if (old !== value) {
+      this.#viewFrame.x = value;
+      this.#calcViewFrameCellsIdx();
+      this.#render();
+    }
   }
   set scrollY(value) {
     if (value > this.maxScrollOffsetY || value < this.maxScrollOffsetY * -1) return;
-    this.#viewFrame.y = value;
-    this.#render();
+    const old = this.#viewFrame.y;
+    if (old !== value) {
+      this.#viewFrame.y = value;
+      this.#calcViewFrameCellsIdx();
+      this.#render();
+    }
   }
   clear() {
     this.context2d.clearRect(0, 0, this.canvas.width, this.canvas.height);
