@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="TPDA">
+  <meta name="apple-mobile-web-app-title" content="TPDA">
+  <meta name="theme-color" content="#1b271b">
+  <meta name="msapplication-navbutton-color" content="#1b271b">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="msapplication-starturl" content="/index.html">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <script src="register-sw.js"></script>
+
+  <title>Tarkov-pda</title>
+  <style>
+    :root{
+      --main-color: #1b271b;
+    }
+    html, body{
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      max-width: 100vw;
+      max-height: 100vh;
+      overflow: hidden;
+      background: none;
+      touch-action: none;
+    }
+    html{
+      --lineC: rgba(0, 0, 0, 0.25);
+      background: linear-gradient(-45deg, rgba(0, 0, 0, 0) 49.9%, var(--lineC) 49.9%, var(--lineC) 60%, rgba(0, 0, 0, 0) 60%), linear-gradient(-45deg, var(--lineC) 10%, rgba(0, 0, 0, 0) 10%);
+      background-color: var(--main-color);
+      background-size: 8px 8px;
+    }
+
+    v-map{
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+    v-map.grabble{
+      cursor: grabbing;
+    }
+  </style>
+  <script src="./v-map.js" type="module"></script>
+</head>
+
+<body>
+  <v-map></v-map>
+  <script src="./index.js" type="module"></script>
+</body>
+
+</html>
