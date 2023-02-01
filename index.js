@@ -31,8 +31,7 @@ if (vMap && vMap instanceof VMap) {
   emptyTile.src = './empty.webp';
   emptyTile.decode();
   vMap.emptyTile = emptyTile;
-  vMap.zoom = 2;
-  // vMap.scrollX -= window.innerWidth/2;
+  vMap.defaultZoom = 3;
 
   const zoomValue = document.createElement('div');
   zoomValue.style.setProperty('user-select', 'none');
@@ -64,9 +63,8 @@ if (vMap && vMap instanceof VMap) {
   resetBtn.addEventListener('click', () => { vMap.reset(); zoomValue.textContent = vMap.zoom.toString();});
   document.body.appendChild(resetBtn);
 
-  setTimeout(() => {
-    vMap.render();
-  }, 300);
+  vMap.reset();
+  zoomValue.textContent = vMap.zoom.toString();
 
 
   /**
