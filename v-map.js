@@ -4,6 +4,7 @@ export class VMap extends HTMLElement {
   emptyTile = null;
   maxZoom = 8;
   minZoom = 0;
+  defaultZoom = 0;
   maxScrollOffsetX = 8000;
   maxScrollOffsetY = 8000;
   tileSize = { x: 100, y: 100 };
@@ -16,10 +17,14 @@ export class VMap extends HTMLElement {
     return this.#zoom;
   }
   set zoom(value) {
+    const old = this.#zoom;
     if (value > this.maxZoom) value = this.maxZoom;
     else if (value < this.minZoom) value = this.minZoom;
-    this.#zoom = round(value, 0);
-    this.#render();
+    if (old !== value) {
+      console.log(value);
+      this.#zoom = round(value, 0);
+      this.#render();
+    }
   }
   constructor() {
     super();
@@ -39,76 +44,55 @@ export class VMap extends HTMLElement {
 
     this.shadowRoot.appendChild(this.canvas);
 
-    this.zoom = 0;
+    this.reset(true);
     this.updateCanvasSize();
   }
-  #onRender = false;
-  #needRender = false;
   render() {
     if (this.tilePath) {
-      if (this.#onRender) {
-        this.#needRender = true;
-        return;
-      }
-      else this.#onRender = true;
       const [collCount, cellCount] = this.zooms[this.zoom];
+      const { start, end } = this.#calcViewFrameCellsIdx();
 
-      const start = {
-        x: ~~(-this.#viewFrame.x / this.tileSize.x),
-        y: ~~(-this.#viewFrame.y / this.tileSize.y)
-      };
-      const end = {
-        x: ~~((-this.#viewFrame.x + this.canvas.width) / this.tileSize.x) + 1,
-        y: ~~((-this.#viewFrame.y + this.canvas.height) / this.tileSize.y) + 1
-      };
+      this.clear();
 
-      start.x = start.x >= 0 ? start.x : 0;
-      start.y = start.y >= 0 ? start.y : 0;
-      end.x = end.x <= collCount ? end.x : collCount;
-      end.y = end.y <= cellCount ? end.y : cellCount;
-
-
-      /**
-       * @type {Promise<{x: number, y: number, img: HTMLImageElement}[]>[]}
-       */
-      const matrix = [];
       for (let x = start.x; x < end.x; x++) {
-        /**
-       * @type {Promise<{x: number, y: number, img: HTMLImageElement}>[]}
-       */
-        const col = [];
         for (let y = start.y; y < end.y; y++) {
-          col.push(new Promise(async (resolve) => {
-            const img = await this.loadImg(this.zoom, x, y);
-            resolve({ x, y, img });
-          }));
+          this.loadImg(this.zoom, x, y)
+            .then(img => {
+              const [collCount, cellCount] = this.zooms[this.zoom];
+              const { start, end } = this.#calcViewFrameCellsIdx();
+              if (x >= start.x && x < end.x && y >= start.y && y < end.y) {
+                const x_px = x * this.tileSize.x + this.#viewFrame.x;
+                const y_px = y * this.tileSize.y + this.#viewFrame.y;
+                this.context2d.drawImage(img, x_px, y_px);
+              }
+            });
         }
-        matrix.push(Promise.all(col));
       }
-      Promise.all(matrix).then(cols => {
-        this.clear();
-        // cols = cols.slice()
-        cols.forEach(col => {
-          col.forEach(cell => {
-            const x = cell.x * this.tileSize.x + this.#viewFrame.x;
-            const y = cell.y * this.tileSize.y + this.#viewFrame.y;
-            this.context2d.drawImage(cell.img, x, y);
-          });
-        });
-        setTimeout(() => {
-          this.#onRender = false;
-          if (this.#needRender) {
-            this.#needRender = false;
-            this.render();
-          }
-        });
-      });
     }
   }
   #render() {
     throttle.call(this, 'throttled-render', () => {
       this.render();
     }, 1000 / 60);
+  }
+  #calcViewFrameCellsIdx() {
+    const [collCount, cellCount] = this.zooms[this.zoom];
+
+    const start = {
+      x: ~~(-this.#viewFrame.x / this.tileSize.x),
+      y: ~~(-this.#viewFrame.y / this.tileSize.y)
+    };
+    const end = {
+      x: ~~((-this.#viewFrame.x + this.canvas.width) / this.tileSize.x) + 1,
+      y: ~~((-this.#viewFrame.y + this.canvas.height) / this.tileSize.y) + 1
+    };
+
+    start.x = start.x >= 0 ? start.x : 0;
+    start.y = start.y >= 0 ? start.y : 0;
+    end.x = end.x <= collCount ? end.x : collCount;
+    end.y = end.y <= cellCount ? end.y : cellCount;
+
+    return { start, end };
   }
   get scrollX() {
     return this.#viewFrame.x;
@@ -129,12 +113,21 @@ export class VMap extends HTMLElement {
   clear() {
     this.context2d.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
-  reset() {
+  reset(noRender = false) {
     Object.assign(this.#viewFrame, { x: 0, y: 0 });
-    this.zoom = 0;
-    this.#render();
+    this.zoom = this.defaultZoom;
+    if(!noRender) this.#render();
   }
-  async loadImg(zoom, x, y) {
+
+  /**
+   *
+   * @param {number} zoom
+   * @param {number} x
+   * @param {number} y
+   * @returns {Promise<HTMLImageElement>}
+   */
+
+  async loadImg(zoom = this.zoom, x = 0, y = 0) {
     return new Promise((resolve, reject) => {
       if (!this.#imgCache[this.zoom]?.[`${x}-${y}`]) {
         const img = new Image(this.tileSize.x, this.tileSize.y);
